@@ -134,8 +134,25 @@ namespace WpfPaint
             openFileDialog.Filter = "Image files (*.jpg, *.jpeg, *.bmp, *.png) | *.jpg; *.jpeg; *.bmp; *.png";
             if (openFileDialog.ShowDialog() == true)
             {
-                paintCanvas.Initialize(new BitmapImage(new Uri(openFileDialog.FileName)));
+                BitmapImage bitmapImage = getBitmapFromFile(openFileDialog.FileName);
+                paintCanvas.Initialize(bitmapImage);
                 this.lastPath = openFileDialog.FileName;
+            }
+        }
+        public BitmapImage getBitmapFromFile(string fileSource) {
+            using (var fileStream = new FileStream(fileSource, FileMode.Open, FileAccess.Read))
+            using (var memoryStream = new MemoryStream())
+            {
+                fileStream.CopyTo(memoryStream);
+                memoryStream.Position = 0;
+
+                var bitmapImage = new BitmapImage();
+                bitmapImage.BeginInit();
+                bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
+                bitmapImage.StreamSource = memoryStream;
+                bitmapImage.EndInit();
+                bitmapImage.Freeze();
+                return bitmapImage;
             }
         }
 
@@ -184,7 +201,7 @@ namespace WpfPaint
             if (!fileInfo.Exists) {
                 File.Create(fileName).Close();
             }
-            RenderTargetBitmap targetBitmap = new RenderTargetBitmap((int)paintCanvas.RenderSize.Height, (int)paintCanvas.RenderSize.Width,
+            RenderTargetBitmap targetBitmap = new RenderTargetBitmap((int)paintCanvas.RenderSize.Width, (int)paintCanvas.RenderSize.Height,
              96d, 96d, PixelFormats.Default);
 
             targetBitmap.Render(paintCanvas);
@@ -192,7 +209,7 @@ namespace WpfPaint
             BitmapFrame frame = BitmapFrame.Create(targetBitmap);
             bitmapEncoder.Frames.Add(frame);
 
-            using (var stream = File.Create(fileName))
+            using (FileStream stream = File.Create(fileName))
             {
                 bitmapEncoder.Save(stream);
             }
